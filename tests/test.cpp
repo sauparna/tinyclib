@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "../tinyclib/klist.h"
-#include "../tinyclib/kpost.h"
 #include "../tinyclib/ktree.h"
 #include "../tinyclib/khash.h"
 
@@ -8,83 +7,75 @@
 
 #define NUM 10
 #define MAXLEN 10
-char s[NUM][MAXLEN] = { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j" };
+#define LISTSIZE 4
+char list_data[NUM][MAXLEN] = { "a", "b", "c", "d", "e", "f", "g", "h", "i", "j" };
+
+Node* list = NULL;
 
 TEST(KListTest, addfront)
 {
-	Node* list = NULL;
-
-	for (int i = 0; i < 3; i++)
-		list = addfront(list, newnode((void*)newkpost(s[i], i)));
-	char expected[NUM][MAXLEN] = { "c", "b", "a" };
+	for (int i = 0; i < LISTSIZE - 1; i++)
+		list = addfront(list, newnode(&list_data[i]));
+	char expected[LISTSIZE - 1][MAXLEN] = { "c", "b", "a" };
 	int i = 0;
 	for (Node* p = list; p; p = p->next, ++i)
-		EXPECT_STREQ((KPOST(p->data))->s, expected[i]);
+		EXPECT_STREQ((char*)(p->data), expected[i]);
 }
 
 TEST(KListTest, addend)
 {
-	Node* list = NULL;
-
-	for (int i = 0; i < 3; i++)
-		list = addend(list, newnode((void*)newkpost(s[i], i)));
-	char expected[NUM][MAXLEN] = { "a", "b", "c" };
+	list = addend(list, newnode(&list_data[LISTSIZE - 1]));
+	char expected[LISTSIZE][MAXLEN] = { "c", "b", "a", "d" };
 	int i = 0;
 	for (Node* p = list; p; p = p->next, ++i)
-		EXPECT_STREQ((KPOST(p->data))->s, expected[i]);
+		EXPECT_STREQ((char*)(p->data), expected[i]);
 }
 
 TEST(KListTest, lookup)
 {
-	int n = 3;
-	Node* list = NULL;
-	for (int i = 0; i < n; i++)
-		list = addfront(list, newnode((void*)newkpost(s[i], i)));
-	Node* a = (Node*)newnode((void*)newkpost(s[0], 0));
-	Node* a_ = lookup(list, a, cmpkpost);
-	ASSERT_STREQ((KPOST(a_->data))->s, (KPOST(a->data))->s);
-	Node* d = (Node*)newnode((void*)newkpost(s[n], 0));
-	Node* d_ = lookup(list, d, cmpkpost);
-	ASSERT_EQ(d_, nullptr);
-}
-
-TEST(KListTest, delnode)
-{
-	int n = 3;
-	Node* list = NULL;
-	for (int i = 0; i < n; i++)
-		list = addfront(list, newnode((void*)newkpost(s[i], i)));
-	Node* a = (Node*)newnode((void*)newkpost(s[0], 0));
-	Node* b = (Node*)newnode((void*)newkpost(s[1], 1));
-	Node* c = (Node*)newnode((void*)newkpost(s[2], 2));
-
-	int i;
-	list = delnode(list, b, cmpkpost, freekpost);
-	char expected1[NUM][MAXLEN] = { "c", "a" };
-	i = 0;
-	for (Node* p = list; p; p = p->next, ++i)
-		EXPECT_STREQ((KPOST(p->data))->s, expected1[i]);
-
-	list = delnode(list, c, cmpkpost, freekpost);
-	char expected2[NUM][MAXLEN] = { "a" };
-	i = 0;
-	for (Node* p = list; p; p = p->next, ++i)
-		EXPECT_STREQ((KPOST(p->data))->s, expected2[i]);
-
-	list = delnode(list, a, cmpkpost, freekpost);
-	ASSERT_EQ(list, nullptr);
+	Node* p = nullptr;
+	Node* q = nullptr;
+	p = (Node*)newnode(&list_data[0]);
+	q = lookup(list, p, _strcmp);
+	ASSERT_STREQ((char*)(p->data), (char*)(q->data));
+	p = (Node*)newnode(&list_data[LISTSIZE + 1]);
+	q = lookup(list, p, _strcmp);
+	ASSERT_EQ(q, nullptr);
 }
 
 TEST(KListTest, apply)
 {
-	int n = 3;
-	Node* list = NULL;
-	for (int i = 0; i < n; i++)
-		list = addfront(list, newnode((void*)newkpost(s[i], i)));
+	int n = 4;
 	int c = 0;
 	apply(list, inccounter, &c);
 	ASSERT_EQ(c, n);
 }
+
+TEST(KListTest, delnode)
+{
+	Node* a = (Node*)newnode(&list_data[0]);
+	Node* b = (Node*)newnode(&list_data[1]);
+	Node* c = (Node*)newnode(&list_data[2]);
+	Node* d = (Node*)newnode(&list_data[3]);
+
+	int i;
+	list = delnode(list, b, _strcmp, NULL);
+	char expected1[LISTSIZE - 1][MAXLEN] = { "c", "a", "d" };
+	i = 0;
+	for (Node* p = list; p; p = p->next, ++i)
+		EXPECT_STREQ((char*)(p->data), expected1[i]);
+
+	list = delnode(list, c, _strcmp, NULL);
+	char expected2[LISTSIZE - 2][MAXLEN] = { "a", "d" };
+	i = 0;
+	for (Node* p = list; p; p = p->next, ++i)
+		EXPECT_STREQ((char*)(p->data), expected2[i]);
+
+	list = delnode(list, a, _strcmp, NULL);
+	list = delnode(list, d, _strcmp, NULL);
+	ASSERT_EQ(list, nullptr);
+}
+
 
 // ============================================= TREE TESTS ======================================================//
 #define NUMTREENODES 10
@@ -133,11 +124,6 @@ void build_path_string(void* arg, void* data)
 	s->append((char*)data);
 }
 
-int cmp_tree_node(void* data, void* data1)
-{
-	return strcmp((char*)data, (char*)data1);
-}
-
 TEST(KTreeTest, init)
 {
 	init_tree();
@@ -174,31 +160,31 @@ TEST(KTreeTest, postorder)
 TEST(KTreeTest, tree_lookup)
 {
 	TNode* found_node = NULL;
-	found_node = tlookup(tree[A], tree[I], cmp_tree_node);
+	found_node = tlookup(tree[A], tree[I], _strcmp);
 	ASSERT_EQ(found_node, nullptr);
-	found_node = tlookup(tree[A], tree[J], cmp_tree_node);
+	found_node = tlookup(tree[A], tree[J], _strcmp);
 	ASSERT_EQ(found_node, tree[J]);
 }
 
 TEST(KTreeTest, non_recursive_tree_lookup)
 {
 	TNode* found_node = NULL;
-	found_node = tlookup(tree[A], tree[I], cmp_tree_node);
+	found_node = tlookup(tree[A], tree[I], _strcmp);
 	ASSERT_EQ(found_node, nullptr);
-	found_node = tlookup(tree[A], tree[J], cmp_tree_node);
+	found_node = tlookup(tree[A], tree[J], _strcmp);
 	ASSERT_EQ(found_node, tree[J]);
 }
 
 TEST(KTreeTest, insert)
 {
-	insert(tree[A], tree[I], cmp_tree_node, NULL);
+	insert(tree[A], tree[I], _strcmp, NULL);
 	ASSERT_EQ(tree[J]->llink, tree[I]);
 	tree[J]->llink = nullptr;
 }
 
 TEST(KTreeTest, non_recursive_insert)
 {
-	nrinsert(tree[A], tree[I], cmp_tree_node, NULL);
+	nrinsert(tree[A], tree[I], _strcmp, NULL);
 	ASSERT_EQ(tree[J]->llink, tree[I]);
 	tree[J]->llink = nullptr;
 }

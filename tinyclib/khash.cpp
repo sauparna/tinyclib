@@ -27,11 +27,6 @@ void freehash(KHash *h, void (*freedata)(void*))
 	free(h);
 }
 
-int _strcmp(void *d1, void *d2)
-{
-	return strcmp((char *)d1, (char *)d2);
-}
-
 unsigned _strhash(void *data, unsigned size)
 {
 	static unsigned MULTIPLIER = 31;

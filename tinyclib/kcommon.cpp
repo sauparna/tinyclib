@@ -7,6 +7,11 @@
 static char* name = NULL; // program name for messages
 static FILE* stream = NULL; // output stream for messages
 
+int _strcmp(void* d1, void* d2)
+{
+	return strcmp((char*)d1, (char*)d2);
+}
+
 char* kprogname(void)
 {
 	return name;
